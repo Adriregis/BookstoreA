@@ -23,5 +23,19 @@ namespace BookstoreA.Controllers
         {
             return View();
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult Create(Genre genre)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View();
+            }
+
+            _service.Insert(genre);
+
+            return RedirectToAction(nameof(Index));
+        }
     }
 }
