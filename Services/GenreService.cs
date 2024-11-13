@@ -1,5 +1,7 @@
 ﻿using BookstoreA.Data;
 using BookstoreA.Models;
+using BookstoreA.Services.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookstoreA.Services
 {
@@ -13,16 +15,34 @@ namespace BookstoreA.Services
 			_context = context;
 		}
 
-
-		public List<Genre> FindAll()
+		public async Task<List<Genre>> FindAllAsync()
 		{
-			return _context.Genres.ToList();
+            return await _context.Genres.ToListAsync();
 		}
 
-		public void Insert(Genre genre)
+        public async Task InsertAsync(Genre genre)
+        {
+            _context.Add(genre);
+           await _context.SaveChangesAsync();
+        }
+
+		public async Task<Genre> FindByIdAsync(int id)
 		{
-			_context.Add(genre);
-			_context.SaveChanges();
+			return await _context.Genres.FindAsync(id);
 		}
-	}
+
+		public async Task RemoveAsync(int id)
+		{
+			try
+			{
+				Genre obj = await _context.Genres.FindAsync(id);
+				_context.Remove(obj);
+				await _context.SaveChangesAsync();
+			}
+			catch (DbUpdateException ex) 
+			{
+				throw new IntegrityException(ex.Message);
+			}
+		}
+    }
 }
