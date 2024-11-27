@@ -107,6 +107,20 @@ namespace BookstoreA.Controllers
                 return RedirectToAction(nameof(Error), new { message = ex.Message});
             }
         }
+        public async Task<IActionResult> Details(int? id)
+        {
+            if (id is null)
+            {
+                return RedirectToAction(nameof(Error), new { message = "Id não fornecido" });
+            }
+            var obj = await _service.FindByIdEagerAsync(id.Value);
+            if (obj is null)
+            {
+                return RedirectToAction(nameof(Error), new { message = "Id não encontrado" });
+            }
+            return View(obj);
+        }
+
 
         public IActionResult Error(string message)
         {
