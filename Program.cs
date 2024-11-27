@@ -28,9 +28,10 @@ internal class Program
 		});
 
 		builder.Services.AddScoped<GenreService>();
+        builder.Services.AddScoped<BookService>();
+        builder.Services.AddScoped<SeedingService>();
 
-
-		var app = builder.Build();
+        var app = builder.Build();
 
 		// Configure the HTTP request pipeline.
 		if (!app.Environment.IsDevelopment())
@@ -39,8 +40,12 @@ internal class Program
 			// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
 			app.UseHsts();
 		}
+        else
+        {
+            app.Services.CreateScope().ServiceProvider.GetRequiredService<SeedingService>().Seed();
+        }
 
-		app.UseHttpsRedirection();
+        app.UseHttpsRedirection();
 		app.UseStaticFiles();
 
 		app.UseRouting();

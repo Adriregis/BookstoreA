@@ -1,5 +1,4 @@
-﻿using System.Runtime.Serialization;
-
+﻿
 namespace BookstoreA.Services
 {
     [Serializable]
@@ -14,10 +13,6 @@ namespace BookstoreA.Services
         }
 
         public NotFoundException(string? message, Exception? innerException) : base(message, innerException)
-        {
-        }
-
-        protected NotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }
