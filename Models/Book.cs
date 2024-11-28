@@ -32,8 +32,6 @@ namespace BookstoreA.Models
         public ICollection<Genre> Genres { get; set; } = new List<Genre>();
 
 
-        private static readonly int _currentYear = DateTime.Now.Year;
-
         public Book()
         {
 
