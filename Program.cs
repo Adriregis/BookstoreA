@@ -1,6 +1,8 @@
 using BookstoreA.Data;
 using BookstoreA.Services;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 internal class Program
 {
@@ -11,8 +13,12 @@ internal class Program
 		// Add services to the container.
 		builder.Services.AddControllersWithViews();
 
+        builder.Services.AddScoped<GenreService>();
+        builder.Services.AddScoped<BookService>();
+        builder.Services.AddScoped<SeedingService>();
 
-		builder.Services.AddDbContext<BookstoreContext>(options =>
+
+        builder.Services.AddDbContext<BookstoreContext>(options =>
 		{
 			options.UseMySql(
 				builder
@@ -27,20 +33,34 @@ internal class Program
 			);
 		});
 
-		builder.Services.AddScoped<GenreService>();
+
+        var app = builder.Build();
+
+        var ptBR = new CultureInfo("pt-BR");
+
+        var localizationOption = new RequestLocalizationOptions
+        {
+            DefaultRequestCulture = new RequestCulture(ptBR),
+            SupportedCultures = new List<CultureInfo> { ptBR },
+            SupportedUICultures = new List<CultureInfo> { ptBR }
+        };
+
+        app.UseRequestLocalization(localizationOption);
 
 
-		var app = builder.Build();
-
-		// Configure the HTTP request pipeline.
-		if (!app.Environment.IsDevelopment())
+        // Configure the HTTP request pipeline.
+        if (!app.Environment.IsDevelopment())
 		{
 			app.UseExceptionHandler("/Home/Error");
 			// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
 			app.UseHsts();
 		}
+        else
+        {
+            app.Services.CreateScope().ServiceProvider.GetRequiredService<SeedingService>().Seed();
+        }
 
-		app.UseHttpsRedirection();
+        app.UseHttpsRedirection();
 		app.UseStaticFiles();
 
 		app.UseRouting();

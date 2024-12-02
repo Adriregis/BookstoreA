@@ -7,151 +7,169 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using BookstoreA.Data;
 using BookstoreA.Models;
+using BookstoreA.Services;
+using BookstoreA.Models.ViewModels;
+using BookstoreA.Services.Exceptions;
+using System.Diagnostics;
 
 namespace BookstoreA.Controllers
 {
     public class BooksController : Controller
     {
-        private readonly BookstoreContext _context;
+        private readonly BookService _service;
+        private readonly GenreService _genreService;
+        private Book book;
 
-        public BooksController(BookstoreContext context)
+        public BooksController(BookService service, GenreService genreService)
         {
-            _context = context;
+            _service = service;
+            _genreService = genreService;
         }
 
         // GET: Books
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Books.ToListAsync());
-        }
-
-        // GET: Books/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var book = await _context.Books
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (book == null)
-            {
-                return NotFound();
-            }
-
-            return View(book);
+            return View(await _service.FindAllAsync());
         }
 
         // GET: Books/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View();
+            List<Genre> genres = await _genreService.FindAllAsync();
+
+            BookFormViewModel viewModel = new BookFormViewModel { Genres = genres };
+            return View(viewModel);
         }
 
-        // POST: Books/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: Books/Create        
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,Price,Author,ReleaseYear")] Book book)
+        public async Task<IActionResult> Create(BookFormViewModel viewModel)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                _context.Add(book);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                viewModel.Genres = await _genreService.FindAllAsync();
+                return View(viewModel);
             }
-            return View(book);
+
+            viewModel.Book.Genres = new List<Genre>();
+            foreach (int genreId in viewModel.SelectedGenresIds)
+            {
+                Genre genre = await _genreService.FindByIdAsync(genreId);
+                if (genre is not null)
+                {
+                    viewModel.Book.Genres.Add(genre);
+                }
+            }
+
+                    await _service.InsertAsync(book);
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Books/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
+            if (id is null)
             {
-                return NotFound();
+                return RedirectToAction(nameof(Error), new { message = "Id não fornecido" });
             }
 
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
+            var obj = await _service.FindByIdAsync(id.Value);
+            if (obj is null)
             {
-                return NotFound();
+                return RedirectToAction(nameof(Error), new { message = "Id não encontrado" });
             }
-            return View(book);
+
+            List<Genre> genres = await _genreService.FindAllAsync();
+            BookFormViewModel viewModel = new BookFormViewModel { Book = obj, Genres = genres };
+
+            return View(viewModel);
         }
 
-        // POST: Books/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: Books/Edit/5 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Price,Author,ReleaseYear")] Book book)
+        public async Task<IActionResult> Edit(int id, BookFormViewModel viewModel)
         {
-            if (id != book.Id)
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                return View();
             }
-
-            if (ModelState.IsValid)
+            if (id != viewModel.Book.Id)
             {
-                try
-                {
-                    _context.Update(book);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!BookExists(book.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                return RedirectToAction(nameof(Error), new { message = "Id's não condizentes" });
+            }
+            try
+            {
+                await _service.UpdateAsync(viewModel);
                 return RedirectToAction(nameof(Index));
             }
-            return View(book);
+            catch (ApplicationException ex)
+            {
+                return RedirectToAction(nameof(Error), new { message = ex.Message }); ;
+            }
         }
 
         // GET: Books/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
+            if (id is null)
             {
-                return NotFound();
+                return RedirectToAction(nameof(Error), new { message = "Id não fornecido" });
             }
 
-            var book = await _context.Books
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (book == null)
+            var obj = await _service.FindByIdAsync(id.Value);
+            if (obj is null)
             {
-                return NotFound();
+                return RedirectToAction(nameof(Error), new { message = "Id não encontrado" });
             }
 
-            return View(book);
+            return View(obj);
         }
 
         // POST: Books/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var book = await _context.Books.FindAsync(id);
-            if (book != null)
+            try
             {
-                _context.Books.Remove(book);
+                await _service.RemoveAsync(id);
+                return RedirectToAction(nameof(Index));
             }
-
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            catch (IntegrityException ex)
+            {
+                return RedirectToAction(nameof(Error), new { message = ex.Message });
+            }
         }
 
-        private bool BookExists(int id)
+        // GET: Books/Details/5
+        public async Task<IActionResult> Details(int? id)
         {
-            return _context.Books.Any(e => e.Id == id);
+            if (id is null)
+            {
+                return RedirectToAction(nameof(Error), new { message = "Id não fornecido" });
+            }
+
+            var obj = await _service.FindByIdAsync(id.Value);
+            if (obj is null)
+            {
+                return RedirectToAction(nameof(Error), new { message = "Id não encontrado" });
+            }
+
+            return View(obj);
+        }
+
+        public IActionResult Error(string message)
+        {
+            ErrorViewModel viewModel = new ErrorViewModel
+            {
+                Message = message,
+                RequestId = Activity.Current?.Id
+                    ?? HttpContext.TraceIdentifier
+            };
+            return View(viewModel);
         }
     }
 }

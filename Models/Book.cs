@@ -25,9 +25,7 @@ namespace BookstoreA.Models
         [Required(ErrorMessage = "O campo {0} é obrigatório")]
         public int ReleaseYear { get; set; }
 
-        //[Display(Name = "Vendas")]
-       // public ICollection<Sale> Sales { get; set; } = new List<Sale>();
-
+        
         [Display(Name = "Gêneros Literários")]
         public ICollection<Genre> Genres { get; set; } = new List<Genre>();
 
