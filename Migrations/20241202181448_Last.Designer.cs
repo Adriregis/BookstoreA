@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookstoreA.Migrations
 {
     [DbContext(typeof(BookstoreContext))]
-    [Migration("20241201205016_Other-Entities")]
-    partial class OtherEntities
+    [Migration("20241202181448_Last")]
+    partial class Last
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
